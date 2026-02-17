@@ -23,8 +23,7 @@ import java.util.stream.Stream;
 /**
  * Scanner to check for I18nTexts without templates in properties files.
  */
-@Command(name = "i18n-scanner", mixinStandardHelpOptions = true, version = "0.7.0",
-        description = "Scans Java source files for I18nText usages and validates them against properties files.")
+@Command(name = "i18n-scanner", mixinStandardHelpOptions = true, version = "0.1.0", description = "Scans Java source files for I18nText usages and validates them against properties files.")
 public class I18nScanner implements Callable<Integer> {
 
     @Parameters(index = "0", description = "The root directory to scan.", defaultValue = ".")
@@ -44,9 +43,7 @@ public class I18nScanner implements Callable<Integer> {
 
         Map<String, List<I18nUsage>> usages = scan(root);
 
-        List<Locale> locales = Arrays.stream(localesStr.split(","))
-                .map(Locale::forLanguageTag)
-                .collect(Collectors.toList());
+        List<Locale> locales = Arrays.stream(localesStr.split(",")).map(Locale::forLanguageTag).collect(Collectors.toList());
 
         int totalErrors = 0;
         for (List<I18nUsage> classUsages : usages.values()) {
@@ -74,10 +71,7 @@ public class I18nScanner implements Callable<Integer> {
         Map<String, List<I18nUsage>> allUsages = new HashMap<>();
 
         try (Stream<Path> paths = Files.walk(root)) {
-            List<Path> javaFiles = paths
-                    .filter(Files::isRegularFile)
-                    .filter(p -> p.toString().endsWith(".java"))
-                    .toList();
+            List<Path> javaFiles = paths.filter(Files::isRegularFile).filter(p -> p.toString().endsWith(".java")).toList();
 
             for (Path file : javaFiles) {
                 List<I18nUsage> fileUsages = scanFile(file);
@@ -91,7 +85,7 @@ public class I18nScanner implements Callable<Integer> {
         return allUsages;
     }
 
-    private List<I18nUsage> scanFile(Path file) throws IOException {
+    private List<I18nUsage> scanFile(Path file) {
         List<I18nUsage> usages = new ArrayList<>();
         CompilationUnit cu;
         try {
@@ -102,61 +96,61 @@ public class I18nScanner implements Callable<Integer> {
         }
 
         String packageName = cu.getPackageDeclaration().map(NodeWithName::getNameAsString).orElse("");
-        
-        cu.findAll(ClassOrInterfaceDeclaration.class).forEach(clazz -> {
-            String simpleClassName = clazz.getNameAsString();
-            
-            // 1. Find fields declared with ofField
-            clazz.findAll(FieldDeclaration.class).forEach(field -> {
-                field.getVariables().forEach(var -> {
-                    var.getInitializer().ifPresent(init -> {
-                        if (init.isMethodCallExpr()) {
-                            MethodCallExpr call = init.asMethodCallExpr();
-                            if (isI18nFactoryCall(call, "ofField")) {
-                                String key = simpleClassName + "." + var.getNameAsString().toLowerCase(Locale.ROOT);
-                                int line = var.getBegin().map(p -> p.line).orElse(-1);
-                                usages.add(new I18nUsage(file, line, key, simpleClassName, packageName));
-                            } else if (isI18nFactoryCall(call, "of")) {
-                                // 2. Find fields declared with explicit i18n key
-                                if (call.getArguments().isNonEmpty() && call.getArgument(0).isStringLiteralExpr()) {
-                                    String shortKey = call.getArgument(0).asStringLiteralExpr().getValue();
-                                    String key = simpleClassName + "." + shortKey;
-                                    int line = var.getBegin().map(p -> p.line).orElse(-1);
-                                    usages.add(new I18nUsage(file, line, key, simpleClassName, packageName));
-                                }
-                            }
-                        }
-                    });
-                });
-            });
 
-            // 3. Find inline explicit of calls (not only in field initializers)
-            clazz.findAll(MethodCallExpr.class).forEach(call -> {
-                if (isI18nFactoryCall(call, "of")) {
-                    // Check if it's the variant with a string key as first argument
-                    // I18nText.of("key", ...)
-                    if (call.getArguments().isNonEmpty() && call.getArgument(0).isStringLiteralExpr()) {
-                         String shortKey = call.getArgument(0).asStringLiteralExpr().getValue();
-                         String key = simpleClassName + "." + shortKey;
-                         int line = call.getBegin().map(p -> p.line).orElse(-1);
-                         
-                         // Avoid duplicates if already caught as field initializer
-                         boolean duplicate = usages.stream().anyMatch(u -> u.lineNumber == line && u.key.equals(key));
-                         if (!duplicate) {
-                             usages.add(new I18nUsage(file, line, key, simpleClassName, packageName));
-                         }
-                    }
-                }
-            });
-        });
+        cu.findAll(ClassOrInterfaceDeclaration.class).forEach( //
+                clazz -> {
+                    String simpleClassName = clazz.getNameAsString();
+
+                    // 1. Find fields declared with ofField
+                    clazz.findAll(FieldDeclaration.class).forEach( //
+                            field -> field.getVariables().forEach( //
+                                    var -> var.getInitializer().ifPresent(init -> {
+                                        if (init.isMethodCallExpr()) {
+                                            MethodCallExpr call = init.asMethodCallExpr();
+                                            if (isI18nFactoryCall(call, "ofField")) {
+                                                String key = simpleClassName + "." + var.getNameAsString().toLowerCase(Locale.ROOT);
+                                                int line = var.getBegin().map(p -> p.line).orElse(-1);
+                                                usages.add(new I18nUsage(file, line, key, simpleClassName, packageName));
+                                            } else if (isI18nFactoryCall(call, "of")) {
+                                                // 2. Find fields declared with explicit i18n key
+                                                if (call.getArguments().isNonEmpty() && call.getArgument(0).isStringLiteralExpr()) {
+                                                    String shortKey = call.getArgument(0).asStringLiteralExpr().getValue();
+                                                    String key = simpleClassName + "." + shortKey;
+                                                    int line = var.getBegin().map(p -> p.line).orElse(-1);
+                                                    usages.add(new I18nUsage(file, line, key, simpleClassName, packageName));
+                                                }
+                                            }
+                                        }
+                                    })));
+
+                    // 3. Find inline explicit of calls (not only in field initializers)
+                    clazz.findAll(MethodCallExpr.class).forEach( //
+                            call -> {
+                                if (isI18nFactoryCall(call, "of")) {
+                                    // Check if it's the variant with a string key as the first argument
+                                    // I18nText.of("key", ...)
+                                    if (call.getArguments().isNonEmpty() && call.getArgument(0).isStringLiteralExpr()) {
+                                        String shortKey = call.getArgument(0).asStringLiteralExpr().getValue();
+                                        String key = simpleClassName + "." + shortKey;
+                                        int line = call.getBegin().map(p -> p.line).orElse(-1);
+
+                                        // Avoid duplicates if already caught as field initializer
+                                        boolean duplicate = usages.stream().anyMatch(u -> u.lineNumber == line && u.key.equals(key));
+                                        if (!duplicate) {
+                                            usages.add(new I18nUsage(file, line, key, simpleClassName, packageName));
+                                        }
+                                    }
+                                }
+                            });
+                });
 
         return usages;
     }
 
     private boolean isI18nFactoryCall(MethodCallExpr call, String methodName) {
         if (!call.getNameAsString().equals(methodName)) return false;
-        
-        return call.getScope().map(scope -> scope.toString().equals("I18nText")).orElse(false)
+
+        return call.getScope().map(scope -> scope.toString().equals("I18nText")).orElse(false) //
                 || call.getScope().isEmpty(); // Simple name call if static import used
     }
 
@@ -165,6 +159,7 @@ public class I18nScanner implements Callable<Integer> {
         return packageName.isEmpty() ? name : packageName + "." + name;
     }
 
+    @SuppressWarnings("ClassCanBeRecord")
     public static class I18nUsage {
         public final Path sourceFile;
         public final int lineNumber;
@@ -187,9 +182,9 @@ public class I18nScanner implements Callable<Integer> {
                     String baseName = packageName.isEmpty() ? "i18n" : packageName + ".i18n";
                     // Using a dummy I18nText instance to trigger its validation logic if possible, 
                     // or just manually check properties.
-                    // Since I18nText's validate() requires an instance and we only have the key,
+                    // Since I18nText's validate() requires an instance, and we only have the key,
                     // we re-implement the resource bundle lookup logic here.
-                    
+
                     ResourceBundle bundle = loadBundle(baseName, locale);
                     if (!bundle.containsKey(key)) {
                         errors.put(locale, "Missing key: " + key);
@@ -203,14 +198,15 @@ public class I18nScanner implements Callable<Integer> {
 
         private ResourceBundle loadBundle(String baseName, Locale locale) {
             // We need to look in src/main/resources or src/test/resources
-            // This is a bit tricky from the scanner. We try to deduce resource path from source path.
+            // This is a bit tricky from the scanner.
+            // We try to deduce the resource path from the source path.
             Path resourcePath = deduceResourcePath(sourceFile);
             ClassLoader loader = new ResourceClassLoader(resourcePath);
             try {
                 return ResourceBundle.getBundle(baseName, locale, loader);
             } catch (MissingResourceException e) {
-                 // Fallback to "i18n" in the same package
-                 return ResourceBundle.getBundle("i18n", locale, loader);
+                // Fallback to "i18n" in the same package
+                return ResourceBundle.getBundle("i18n", locale, loader);
             }
         }
 

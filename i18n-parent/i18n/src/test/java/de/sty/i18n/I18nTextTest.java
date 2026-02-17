@@ -52,11 +52,11 @@ class I18nTextTest {
         I18nText base = TYPED_THREE.base();
         // Key is included in toString representation; avoid calling private internals
         assertThat(base.toString()).contains("I18nTextTest.typed_three");
-        
+
         // Let's create an explicit one to verify the logic without relying on field deduction if it fails in some environments
         I18nText.I18nText3<String, String, String> explicit = I18nText.of("typed_three", String.class, "p1", String.class, "p2", String.class, "p3");
         assertThat(explicit.i18n(Locale.ENGLISH, "a", "b", "c")).isEqualTo("Three: a, b, c");
-        
+
         // Also test I18nText3.i18n(T1, T2, T3)
         try {
             I18nText.setLocaleProvider(() -> Locale.ENGLISH);
@@ -68,7 +68,7 @@ class I18nTextTest {
 
     @Test
     void testGetTemplate() {
-        // Verify branch where formatter is null (no placeholders)
+        // Verify the code branch where the formatter is null (no placeholders)
         assertThat(I18nText.of("plain").i18n(Locale.ENGLISH)).isEqualTo("Just plain");
         assertThat(I18nText.of("plain").i18n(Locale.GERMAN)).isEqualTo("Einfach nur Text");
     }
@@ -129,7 +129,7 @@ class I18nTextTest {
 
         // EN: At {time, time, short} on {time, date, medium}, user {user} {action} from {ip}.
         // At 2:30 PM on May 10, 2024, user admin logged in from 127.0.0.1.
-        // Note: Exact format might vary by environment, so we use contains for key parts
+        // Note: Exact format might vary by environment, so we use "contains" for key parts
         String enResult = COMPLEX.i18n(Locale.ENGLISH, params);
         assertThat(enResult).contains("2:30");
         assertThat(enResult).contains("PM");
@@ -186,9 +186,9 @@ class I18nTextTest {
         String enUsResult = CURRENCY.i18n(Locale.US, 1234.56);
         assertThat(enUsResult).contains("$").contains("1,234.56");
 
-        // Germany uses € suffix (usually)
+        // Germany (usually) uses € suffix
         String deDeResult = CURRENCY.i18n(Locale.GERMANY, 1234.56);
-        // ICU/Java might use different characters for space or € depending on version,
+        // ICU/Java might use different characters for space or € depending on their version,
         // but it should contain the currency symbol and the formatted number.
         assertThat(deDeResult).contains("1.234,56").contains("€");
     }
@@ -213,7 +213,7 @@ class I18nTextTest {
     void testTypeSafeApi() {
         assertThat(TYPED_GREETING.i18n(Locale.ENGLISH, "Paul")).isEqualTo("Hello Paul!");
         assertThat(TYPED_BIGGER_THAN.i18n(Locale.ENGLISH, 5L, 10L)).isEqualTo("5 is not bigger than 10!");
-        
+
         // Typed currency and date
         java.util.Date date = new java.util.GregorianCalendar(2024, java.util.Calendar.MAY, 10).getTime();
         String enResult = TYPED_PRICE_TAG.i18n(Locale.US, 1234.56, date);
@@ -230,14 +230,14 @@ class I18nTextTest {
     @Test
     void testTypeMismatch() {
         I18nText.I18nText1<Double> typedCurrency = I18nText.of("currency", Double.class, "amount");
-        // This will allow Double. But if we try to call the underlying base with wrong type:
+        // This will allow Double. But if we try to call the underlying base with a wrong type:
         String errorResult = typedCurrency.base().i18n(Locale.ENGLISH, "not a double");
         assertThat(errorResult).contains("!!ERROR: Type mismatch for parameter 'amount': expected Double but got String!!");
     }
 
     @Test
     void testTypeMismatchInMap() {
-        // We use I18nText.of(String, Class, String) to get a typed template, then access base
+        // We use I18nText.of(String, Class, String) to get a typed template, then access the field "base"
         I18nText base = I18nText.of("currency", Double.class, "amount").base();
         String result = base.i18n(Locale.ENGLISH, Map.of("amount", "not a double"));
         assertThat(result).contains("!!ERROR: Type mismatch for parameter 'amount': expected Double but got String!!");

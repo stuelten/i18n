@@ -24,7 +24,7 @@
         <repository>
             <id>github</id>
             <name>GitHub Packages</name>
-            <url>https://maven.pkg.github.com/stuelten/fileserv</url>
+            <url>https://maven.pkg.github.com/stuelten/i18n</url>
         </repository>
     </distributionManagement>
 

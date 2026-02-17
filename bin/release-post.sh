@@ -67,7 +67,7 @@ if [ "$GITHUB_ACTIONS" = "true" ]; then
 fi
 
 "$SCRIPT_DIR/version-set-snapshot.sh" "$NEXT_SNAPSHOT"
-git add "**/pom.xml" "pom.xml" VERSION
+git add "**/pom.xml" VERSION
 git commit -m "chore: Bump snapshot version to $NEXT_SNAPSHOT" || echo "Nothing to commit"
 
 if [ "$PUSH" = true ]; then

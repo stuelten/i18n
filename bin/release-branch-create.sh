@@ -73,7 +73,7 @@ log "Updating Maven versions to $VERSION..."
 "$SCRIPT_DIR/version-set.sh" "$VERSION"
 
 log "Committing version change..."
-git add "**/pom.xml" "pom.xml" VERSION
+git add "**/pom.xml" VERSION
 git commit -m "chore: release version $VERSION"
 
 if [ "$PUSH" = true ]; then

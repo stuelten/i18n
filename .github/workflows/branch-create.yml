@@ -1,0 +1,49 @@
+name: "Create Branch from Issue"
+
+# Trigger: Automatically on issue labeling or manually via workflow_dispatch
+on:
+  issues:
+    types: [ labeled ]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: "Issue number to create branch for"
+        required: true
+      use_issue_data:
+        description: "Use issue data (title/labels) instead of manual input"
+        type: boolean
+        default: true
+      branch_type:
+        description: "Manually set branch type (feature, bugfix, docs, task) (ignored if use_issue_data is true)"
+        required: false
+      branch_title:
+        description: "Manually set branch title (ignored if use_issue_data is true)"
+        required: false
+
+jobs:
+  create-branch:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+    steps:
+      # Check out the repository to create branches
+      - uses: actions/checkout@v6
+
+      # Create the branch using the extracted script
+      - name: "Create Branch"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPO: ${{ github.repository }}
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            if [[ "${{ inputs.use_issue_data }}" == "true" ]]; then
+              ./bin/branch-create.sh "${{ inputs.issue_number }}"
+            else
+              ./bin/branch-create.sh --type "${{ inputs.branch_type }}" --title "${{ inputs.branch_title }}" "${{ inputs.issue_number }}"
+            fi
+          else
+            # Automatic trigger from issue event
+            LABELS="${{ join(github.event.issue.labels.*.name, ',') }}"
+            ./bin/branch-create.sh --title "${{ github.event.issue.title }}" --labels "$LABELS" "${{ github.event.issue.number }}"
+          fi

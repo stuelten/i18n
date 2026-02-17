@@ -1,0 +1,90 @@
+name: "Release Artifacts"
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release (leave empty for auto-increase)"
+        required: false
+        default: ""
+  push:
+    branches:
+      - main
+
+jobs:
+  prepare:
+    name: "Prepare correct version"
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version_increase.outputs.version }}
+      next_snapshot: ${{ steps.version_increase.outputs.next_snapshot }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: "Increase Version"
+        id: version_increase
+        run: |
+          chmod +x bin/version-get.sh
+          chmod +x bin/version-increase-semver.sh
+          echo "Current version:  $(./bin/version-get.sh)"
+
+          VERSION_INCREASED=$(./bin/version-increase-semver.sh)
+          VERSION_INPUT="${{ github.event.inputs.version }}"
+          VERSION=${VERSION_INPUT:-$VERSION_INCREASED}
+          
+          # Calculate next snapshot version based on the released version
+          # Split version into components
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
+          NEXT_VERSION="$MAJOR.$((MINOR + 1)).0"
+          NEXT_SNAPSHOT="${NEXT_VERSION}-SNAPSHOT"
+
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "next_snapshot=$NEXT_SNAPSHOT" >> $GITHUB_OUTPUT
+          echo "### Release Version: $VERSION" >> $GITHUB_STEP_SUMMARY
+          echo "### Next Snapshot: $NEXT_SNAPSHOT" >> $GITHUB_STEP_SUMMARY
+
+  release:
+    name: "Build and Release"
+    needs: prepare
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: "Set up Java"
+        uses: actions/setup-java@v5
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: "Build and Release"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          chmod +x bin/*.sh
+          ./bin/release.sh --push "${{ needs.prepare.outputs.version }}"
+
+  post-release:
+    name: "Post Release"
+    needs: [ prepare, release ]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - name: "Bump new snapshot version"
+        run: |
+          chmod +x bin/*.sh
+          ./bin/release-post.sh --push "${{ needs.prepare.outputs.next_snapshot }}"

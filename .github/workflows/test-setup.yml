@@ -1,0 +1,22 @@
+name: "start-test-setup"
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-setup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: "Set up Java"
+        uses: actions/setup-java@v5
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: "Build and Run Full Test Setup"
+        run: |
+          chmod +x test/run-full-test.sh
+          ./test/run-full-test.sh -q

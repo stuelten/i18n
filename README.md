@@ -1,10 +1,45 @@
 ## I18n Project
 
-This project provides a robust, type-safe, and developer-friendly internationalization (i18n) system for Java applications. It is divided into two modules:
+This project provides a robust, type-safe, and developer-friendly
+internationalization (i18n) system for Java applications.
+It is divided into two modules:
 
-- **`fileserv-i18n`**: The core library for handling i18n texts with named placeholders and ICU4J support.
-- **`fileserv-i18n-scanner`**: A source code scanner that uses syntactical analysis (JavaParser) to validate i18n usages.
-- **`fileserv-i18n-example`**: Example project demonstrating the use of the library.
+- **`i18n`**: The core library for handling i18n texts with named placeholders and ICU4J support.
+- **`i18n-generator`**: A tool to generate type-safe Java classes from properties files.
+- **`i18n-scanner`**: A source code scanner that uses syntactical analysis (JavaParser) to validate i18n usages.
+- **`i18n-example`**: Example project demonstrating the use of the library.
+
+### I18n-Generator
+
+The `i18n-generator` takes a properties file
+and generates a Java class with type-safe methods for each entry.
+
+#### Features
+- **Typed Placeholders**: Specify types in the properties file: `hello={name:String}`, `items={count:Integer}`.
+- **ICU Format Types**: Automatically detects types for ICU formats: `{amount, number}` -> `Number`, `{date, date}` -> `java.util.Date`.
+- **Type-safe Methods**: Generates static methods with the correct parameter types.
+- **Default Type**: Placeholders without a type or ICU format default to `String`.
+
+#### Usage
+```bash
+java -jar i18n-generator.jar messages.properties -o Messages.java -p com.example -c Messages
+```
+
+Example properties:
+```properties
+greeting=Hello {name}!
+price_tag=The price is {amount, number, currency} on {day, date}.
+items_count={count, number} items: {items:List}
+```
+
+Generated Java:
+```java
+public class Messages {
+    public static String greeting(String name) { /* ... */ }
+    public static String priceTag(Number amount, java.util.Date day) { /* ... */ }
+    public static String itemsCount(Number count, java.util.List<?> items) { /* ... */ }
+}
+```
 
 ### 0. Build Instructions
 
@@ -265,11 +300,13 @@ void validateGreeting() {
 
 ### 6. Source Code Scanning
 
-To ensure that all `I18nText` instances in your code have corresponding entries in the property files,
+To ensure that all `I18nText` instances in your code
+have corresponding entries in the property files,
 you can use the `I18nScanner` tool.
 This tool is located in the `fileserv-i18n-scanner` module.
 
-It uses syntactical analysis (JavaParser) to find all `I18nText` declarations and `i18n(...)` calls,
+It uses syntactical analysis (JavaParser)
+to find all `I18nText` declarations and `i18n(...)` calls,
 making it much more robust than simple regex scanners.
 
 #### 6.1. Running the Scanner

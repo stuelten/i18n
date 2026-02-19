@@ -16,6 +16,8 @@
     <modules>
         <module>i18n</module>
         <module>i18n-scanner</module>
+        <module>i18n-generator</module>
+        <module>i18n-maven-plugin</module>
         <module>i18n-example</module>
     </modules>
 
